@@ -1,0 +1,24 @@
+# How this implementation finds Raven.
+#
+# Build Raven's shared library once from the checkout next to this repository:
+#
+#     cmake -S ../Raven -B ../Raven/build -DRAVEN_BUILD_SHARED=ON
+#     cmake --build ../Raven/build
+#
+# Then `cargo build` and `cargo run` need no environment variables at all:
+#
+#   - RAVEN_LIB_DIR tells the build script where the library is to link
+#     against (relative to this file's parent: rust/ -> ../../Raven/build);
+#   - the rpath records the same place in the binary, so the loader finds
+#     libraven.so.0 at run time ($ORIGIN is rust/target/<profile>; four levels
+#     up is 41-Raven, then Raven/build).
+#
+# Using an installed raven-dev package instead (a static libraven.a)?
+#
+#     RAVEN_STATIC=1 RAVEN_LIB_DIR=/usr/lib cargo run --release
+#
+[env]
+RAVEN_LIB_DIR = { value = "../../Raven/build", relative = true }
+
+[build]
+rustflags = ["-C", "link-arg=-Wl,-rpath,$ORIGIN/../../../../Raven/build"]

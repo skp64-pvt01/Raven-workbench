@@ -1,8 +1,10 @@
 # Workbench
 
 A desktop application shell: a menu bar, a toolbar, a side bar, a status bar,
-and a central pane that switches between an **Application** page and the
-instrument panel kept in `cpp/panel/` (the same pane as Raven's InstrumentPanel example).
+and a central pane that switches between an **Application** page and an
+instrument panel. The same application is written **three times** - C++, Rust
+and Python - over one `workbench.jsonc`, one `workbench.schema.json` and one
+`help/` folder.
 
 Configuration comes from a **JSONC** file (JSON with comments), so a build can
 ship defaults and a user can turn features on and off without a recompile.
@@ -34,7 +36,7 @@ ship defaults and a user can turn features on and off without a recompile.
 | **Checkable items** | View > Application and View > Instrument panel keep their own check marks; the handler reads the item |
 | **Toolbar** | an `HBox` of buttons, optional — `"ui": { "toolbar": false }` removes it |
 | **Side bar** | fixed-width `VBox` listing the panes; the active one is highlighted |
-| **Central pane** | a `Switcher`: page 0 the Application page, page 1 the instrument panel. Neither is rebuilt when shown |
+| **Central pane** | a `Switcher` with four pages: Application, instrument panel, user guide, Preferences. None is rebuilt when shown |
 | **Application page** | name, version, build date, release channel, Raven version, the configuration file and its state, shortcuts |
 | **Status bar** | the last command or the configuration state on the left, live plant values on the right |
 | **Documentation pane** | a `WebView` (`raven_web`) embedded in the Switcher: Help > User guide (F1), with back / forward / reload |
@@ -180,10 +182,10 @@ and defaults the application uses.
 }
 ```
 
-**How the application uses it.** `schema.cpp` parses the document with the same
+**How the application uses it.** `schema.cpp` (and its Rust and Python ports) parses the document with the same
 JSONC reader as the settings, into groups of `SchemaSetting` (path, title,
 description, type, choices, range, default). The Preferences pane
-(`preferences.cpp`) builds itself from that list: it iterates the groups, adds a
+(`preferences.cpp`, and the ports) builds itself from that list: it iterates the groups, adds a
 header, and one row per setting with the control chosen by type. Values are read
 and written through `config_get` / `config_set`, keyed by the dotted path
 (`simulation.alarm_limit`) - so a setting goes from the schema to a working
@@ -256,9 +258,10 @@ Application page and the status bar, and the defaults are used.
 | `simulation.alarm_limit` | number | `75` | the interlock threshold: needle colour, alarm lamp, chart line |
 | `simulation.chart_seconds` | number | `10` | how much history the trend shows |
 
-The reader is `config.h` / `config.cpp`: a small recursive-descent JSONC parser
-(~300 lines) with `//` and block comments, trailing commas and `\u` escapes.
-No dependency, and the error message carries the line number.
+The reader is `config.h` / `config.cpp`, and `config.rs` / `config.py` in the
+other implementations: a small recursive-descent JSONC parser (~300 lines) with
+`//` and block comments, trailing commas and `\u` escapes. No dependency, and
+the error message carries the line number.
 
 ---
 
@@ -276,33 +279,74 @@ No dependency, and the error message carries the line number.
 | [`help/`](help) | the user guide: `index.html`, `configuration.html`, `style.css` |
 | [`cpp/panel/panel.h`](cpp/panel/panel.h) / `panel.cpp` | the pane: instruments, lamps, chart, simulated plant |
 | [`cpp/CMakeLists.txt`](cpp/CMakeLists.txt) | version, build date, configuration path, and the panel module |
+| [`rust/src/main.rs`](rust/src/main.rs) | the same shell in Rust, plus the tests |
+| [`rust/src/json.rs`](rust/src/json.rs), `config.rs`, `schema.rs`, `preferences.rs` | the Rust JSONC reader, settings, schema reader and form |
+| [`rust/src/panel.rs`](rust/src/panel.rs) | the instrument panel in Rust |
+| [`python/workbench.py`](python/workbench.py) | the same shell in Python, plus the tests |
+| [`python/jsonc.py`](python/jsonc.py), `config.py`, `schema.py`, `preferences.py` | the Python JSONC reader, settings, schema reader and form |
+| [`python/panel.py`](python/panel.py), [`python/web.py`](python/web.py) | the instrument panel and the `raven_web` calls |
 
 ---
 
 ## Build and run
 
-Raven is the only dependency, and it is not vendored. Either install it (the
-`raven-dev` package, or `cmake --install build` of a checkout), or point the
-build at a checkout:
+Raven is the only dependency, and it is not vendored. Build its shared library
+once from the checkout next to this repository:
+
+```bash
+cmake -S ../Raven -B ../Raven/build -DRAVEN_BUILD_SHARED=ON
+cmake --build ../Raven/build -j"$(nproc)"
+```
+
+All three implementations read the `workbench.jsonc`, `workbench.schema.json`
+and `help/` at the root of this repository, and offer the same command line:
+`--config`, `--test`, `--capture`, `--pane`, `--menu`, `--frames`.
+
+### C++
+
+Uses the installed `raven-dev` package or `cmake --install ../Raven/build` of a
+checkout, or the checkout itself with `-DRAVEN_SOURCE_DIR`:
 
 ```bash
 cd cpp
 cmake -S . -B build                                   # Raven installed
-# or: cmake -S . -B build -DRAVEN_SOURCE_DIR=/path/to/Raven
+# or: cmake -S . -B build -DRAVEN_SOURCE_DIR=../../Raven
 
 cmake --build build
 ctest --test-dir build --output-on-failure            # or ./build/workbench --test
-
-./build/workbench                              # the application
-./build/workbench --config mine.jsonc          # another configuration
-./build/workbench --test                       # no window, no GPU
-./build/workbench --capture app.ppm --pane application
-./build/workbench --capture panel.ppm --pane instrument-panel
-./build/workbench --capture menu.ppm --menu   # with a context menu open
 ```
 
-The screenshots above were made with `--capture`, the configured one with
-`--config` pointing at a file that sets `theme`, `toolbar`, `pane`,
+### Rust
+
+The `raven-gui` crate is not published; `rust/Cargo.toml` takes it from the
+Raven checkout next to this repository (change that one path if Raven is
+elsewhere). From `rust/`:
+
+```bash
+cargo run --release                                   # the application
+cargo run --release -- --test                         # no window, no GPU
+```
+
+`.cargo/config.toml` points `RAVEN_LIB_DIR` at `../Raven/build` and records the
+same place in the binary's rpath, so no environment variable is needed when the
+checkout is a sibling.
+
+### Python
+
+Needs the binding and the shared library, exactly like the Python course (from
+`python/`):
+
+```bash
+PYTHONPATH=../../Raven/bindings/python \
+RAVEN_LIBRARY=../../Raven/build/libraven.so \
+python3 workbench.py --test
+```
+
+`raven.py` covers `Raven.h`; the user-guide pane needs `raven_web`, so
+`python/web.py` declares those calls with ctypes against the same library.
+
+The screenshots above were made with the C++ `--capture`, the configured one
+with `--config` pointing at a file that sets `theme`, `toolbar`, `pane`,
 `alarm_limit` and `chart_seconds`.
 
 ---
@@ -313,6 +357,9 @@ The screenshots above were made with `--capture`, the configured one with
 workbench: 0 checks failed, 65 samples, config 8 settings loaded
 PASS
 ```
+
+The Rust and Python implementations run the same checks and print
+`workbench (rust): ...` / `workbench (python): ...`; all three end with `PASS`.
 
 * the JSONC reader: comments, trailing commas, every key, the settings count, a
   syntax error (reported, defaults kept) and a missing file (not an error);
@@ -353,8 +400,9 @@ PASS
 | A settings pane | build sliders/checkboxes from the same `Config`, then write the file back |
 | Recent files | a sub-menu built at run time with `Rmenu_add_item` |
 | Icons | `Rimage_create` + `Rimage_set_texture` in the toolbar |
-| More settings | one key in `config.cpp`, one field in `Config`, one line in the Application page |
+| More settings | one key in each `config` module, one field in `Config`, one line in the Application page |
 
-The instrument panel is `cpp/panel/`; the standalone `Examples/InstrumentPanel`
-example uses the same code and explains the paint callbacks behind the gauge,
-the meter, the lamps and the chart.
+The instrument panel is `cpp/panel/`, `rust/src/panel.rs` and `python/panel.py`;
+the standalone `Examples/InstrumentPanel` example uses the same pane and
+explains the paint callbacks behind the gauge, the meter, the lamps and the
+chart.

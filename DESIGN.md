@@ -1,14 +1,16 @@
 # DESIGN.md — Workbench
 
 Workbench is a desktop application shell on top of **Raven**, a C GUI library.
-This document describes how it is put together and how to extend it; it is
-written to stand on its own, because this folder is meant to be forked into a
-separate project or used as the template of the next one.
+It is written **three times** — C++, Rust and Python — over one configuration
+file, one JSON Schema and one user guide. This document describes how it is put
+together and how to extend it; it is written to stand on its own, because this
+folder is meant to be forked into a separate project or used as the template of
+the next one.
 
-The only external dependency is Raven itself (the library and its
-`raven_web` functions, both in the same installation). It is used from an
-installed package or from a checkout with `-DRAVEN_SOURCE_DIR`; nothing is
-vendored.
+The only external dependency is Raven itself (the library and its `raven_web`
+functions, both in the same installation). C++ uses it from an installed
+package or a checkout; Rust takes the `raven-gui` crate from a checkout; Python
+uses `bindings/python` and the shared library. Nothing is vendored.
 
 ---
 
@@ -41,18 +43,33 @@ Workbench/
 ├── workbench.jsonc        the settings, with comments
 ├── workbench.schema.json  JSON Schema: the same settings, described
 ├── help/                  index.html, configuration.html, style.css
-└── cpp/
-    ├── CMakeLists.txt
-    ├── main.cpp           the shell
-    ├── config.h/.cpp      settings, JSONC load, get/set, comment-preserving save
-    ├── json.h/.cpp        JSONC reader with value spans
-    ├── schema.h/.cpp      the schema reader
-    ├── preferences.h/.cpp the Preferences form
-    └── panel/panel.h/.cpp the instrument pane (a reusable module)
+├── cpp/
+│   ├── CMakeLists.txt
+│   ├── main.cpp           the shell
+│   ├── config.h/.cpp      settings, JSONC load, get/set, comment-preserving save
+│   ├── json.h/.cpp        JSONC reader with value spans
+│   ├── schema.h/.cpp      the schema reader
+│   ├── preferences.h/.cpp the Preferences form
+│   └── panel/panel.h/.cpp the instrument pane (a reusable module)
+├── rust/
+│   ├── Cargo.toml         the raven-gui path dependency
+│   ├── .cargo/config.toml RAVEN_LIB_DIR and the rpath
+│   └── src/main.rs        the shell, in Rust
+│       src/{json,config,schema,preferences,panel}.rs
+└── python/
+    ├── workbench.py       the shell, in Python
+    ├── {jsonc,config,schema,preferences,panel}.py
+    └── web.py             the raven_web calls the binding does not generate
 ```
 
-`panel/` is a copy of the instrument panel example from Raven's examples; it
-lives here so the folder builds alone. Treat it as part of this project.
+There is no shared source: each language has its own shell, JSONC reader,
+settings, schema reader, form and panel, because the point is to show the whole
+application in each. The *contract* is shared — `workbench.jsonc`,
+`workbench.schema.json`, `help/`, and the same actions, panes, menus and
+settings.
+
+The panel also exists in Raven's `Examples/InstrumentPanel`; it is the same
+module and the copies are kept in step.
 
 ---
 
@@ -84,6 +101,11 @@ lives here so the folder builds alone. Treat it as part of this project.
 | `json/*` | a JSONC reader that records the byte span of every value (used for comment-preserving saves) |
 | `schema/*` | reads the JSON Schema into groups of settings (title, description, type, choices, range, default) |
 | `preferences/*` | the generated form: search, rows, controls, Save, Reset |
+
+The same six modules exist in all three languages: `cpp/*`, `rust/src/*`,
+`python/*.py`. The Rust and Python versions follow the C++ one file by file, so
+a reader can compare them side by side; only the naming follows each language
+(`Config` struct/class, `config.load` / `config_load`, and so on).
 
 ---
 
@@ -148,11 +170,19 @@ menu-bearing areas are made hit-testable. *Cost:* the area becomes a hit target
 trend window and switches apply at once; the toolbar and first pane are read
 while building the window, so the UI says "next start".
 
-**D9 — Paths are compiled at configure time.** `WORKBENCH_DEFAULT_CONFIG`,
-`WORKBENCH_HELP_DIR` and `WORKBENCH_SCHEMA` come from
-`CMAKE_CURRENT_SOURCE_DIR`, so a copied folder finds its own files. *Cost:* a
-packaged application must install those files and change the definitions (the
-Raven tutorials' packaging step shows how).
+**D9 — Paths are derived from the source location.** C++ compiles in
+`WORKBENCH_DEFAULT_CONFIG`, `WORKBENCH_HELP_DIR` and `WORKBENCH_SCHEMA` from
+`CMAKE_CURRENT_SOURCE_DIR`; Rust uses `env!("CARGO_MANIFEST_DIR")/../…`; Python
+uses `__file__`'s parent. *Why:* a copied folder finds its own files from any
+working directory. *Cost:* a packaged application must install those files and
+adjust the locations (the Raven tutorials' packaging step shows how).
+
+**D10 — Three implementations, one contract.** The settings file, the schema
+and the guide are shared; the actions, panes, menus, labels and checks are the
+same. *Why:* the Workbench doubles as the comparison and the template for each
+binding, and a difference between them is a bug. *Cost:* a behaviour change is
+written three times, and the ports can drift — every change lands in all three
+`--test` paths.
 
 ---
 
@@ -168,10 +198,10 @@ group (`release`, `ui`, `startup`, `simulation`). Each key carries `title`,
 uses those to build the form and clamp values; `additionalProperties: false` and
 `$schema` make the file useful to external validators too.
 
-**Adding a setting** — four places: the `Config` field, `config_get` and
-`config_set`, the schema entry, the shipped `workbench.jsonc`. If it can apply
-without a restart, add it to `apply_live_settings` in `main.cpp`. The form picks
-it up on the next start.
+**Adding a setting** — the `Config` field and its `get`/`set` in each of the
+three implementations, the schema entry, the shipped `workbench.jsonc`, and — if
+it can apply without a restart — the live apply in each shell. The form picks it
+up on the next start.
 
 ---
 
@@ -194,8 +224,10 @@ panel_set_switch / panel_switch / panel_button
 
 The four paint callbacks (gauge, digital meter, lamp, chart) draw with
 `Rdraw_*` and read their colours from `Rwidget_get_color`, so they follow the
-theme. Adding an instrument means: state in `Panel`, a paint callback, an
-accessor, and — if configurable — a `panel_set_*` applied from `main.cpp`.
+theme. Rust and Python expose the same functions (`Panel::build` /
+`panel.build`, `set_alarm_limit` / `set_alarm_limit`, and so on). Adding an
+instrument means: state in the panel, a paint callback, an accessor, and — if
+configurable — a setter applied by the shell; in all three implementations.
 
 ---
 
@@ -232,7 +264,14 @@ panels are pointer-transparent by default.
 `Rwindow_inject_*`. It checks: the schema loads (groups/settings counts), the
 preferences filter and controls, saving (including comments and key insertion)
 and reading back, pane switching from the menu, side bar, tool bar and context
-menus, the plant's response, the clipboard.
+menus, the plant's response, the clipboard. The C++, Rust and Python programs
+run the same checks and print the same summary.
+
+```bash
+./build/workbench --test                      # C++
+cd rust && cargo run --release -- --test      # Rust
+cd python && python3 workbench.py --test      # Python (see AGENTS.md for the env)
+```
 
 The browser is excluded: the test points `Rweb_set_browser_path` at a missing
 program, so the pane is tested and Chromium is not started. Writes go to `/tmp`.
@@ -250,6 +289,10 @@ Visual changes are reviewed from `--capture` images (PPM), not pixel assertions.
 * The guide is local HTML; no search or live manual.
 * No settings for lists/arrays.
 * Packaging is out of scope here — see the Raven tutorials' `09-packaging`.
+* The three implementations can drift; the shared checks are the guard.
+* Python has no generated `raven_web` binding, so `python/web.py` declares the
+  calls it needs with ctypes; an older library without those symbols cannot
+  show the guide.
 
 ---
 
@@ -263,6 +306,19 @@ Visual changes are reviewed from `--capture` images (PPM), not pixel assertions.
 | `cpp/schema.cpp` | 110 | schema reader |
 | `cpp/preferences.cpp` | 365 | form, controls, search, save/reset |
 | `cpp/panel/panel.cpp` | 560 | instruments, plant, paint callbacks |
+| `rust/src/main.rs` | 1000 | the shell, actions, panes, menus, context menus, frame, tests |
+| `rust/src/config.rs` | 340 | load, get/set, comment-preserving save |
+| `rust/src/json.rs` | 300 | JSONC reader with spans |
+| `rust/src/schema.rs` | 110 | schema reader |
+| `rust/src/preferences.rs` | 300 | form, controls, search, save/reset |
+| `rust/src/panel.rs` | 700 | instruments, plant, paint callbacks |
+| `python/workbench.py` | 900 | the shell and its tests |
+| `python/config.py` | 300 | load, get/set, comment-preserving save |
+| `python/jsonc.py` | 230 | JSONC reader with spans |
+| `python/schema.py` | 100 | schema reader |
+| `python/preferences.py` | 250 | form, controls, search, save/reset |
+| `python/panel.py` | 500 | instruments, plant, paint callbacks |
+| `python/web.py` | 80 | the raven_web declarations |
 | `workbench.schema.json` | 100 | the settings schema |
 | `workbench.jsonc` | 30 | the shipped configuration |
 | `help/*.html` | 240 + CSS | the user guide |

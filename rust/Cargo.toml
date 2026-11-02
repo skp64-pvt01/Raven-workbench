@@ -1,0 +1,15 @@
+[package]
+name = "workbench"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "workbench"
+path = "src/main.rs"
+
+[dependencies]
+# Raven is the only dependency, and it is not vendored. The crate lives in a
+# Raven checkout: this path expects that checkout next to this repository
+# (`../Raven`). With Raven elsewhere, change this one line.
+raven-gui = { path = "../../Raven/bindings/rust" }
