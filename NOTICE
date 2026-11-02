@@ -1,0 +1,5 @@
+Raven Workbench
+
+This project is built on Raven (https://github.com/oscar-soirey/Raven),
+licensed under the Apache License, Version 2.0. The instrument pane in
+cpp/panel/ comes from Raven's examples and carries the same license.

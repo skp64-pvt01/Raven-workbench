@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raven Workbench — Configuration</title>
+<link rel="stylesheet" href="style.css">
+<script>
+	/* The application passes its theme: index.html?theme=dark */
+	(function () {
+		var theme = new URLSearchParams(location.search).get("theme");
+		if (theme === "dark") document.documentElement.className = "dark";
+	})();
+</script>
+</head>
+<body>
+<main>
+	<nav>
+		<a href="index.html">User guide</a>
+		<a href="configuration.html">Configuration</a>
+		<a href="index.html#shortcuts">Shortcuts</a>
+	</nav>
+
+	<h1>Configuration</h1>
+	<p class="lead">Settings come from a JSONC file: JSON with comments and trailing commas.</p>
+
+	<h2>Editing it</h2>
+	<p><strong>Edit &gt; Preferences</strong> (<kbd>Ctrl</kbd>+<kbd>,</kbd>) shows the same
+	keys as a form, built from
+	<a href="#schema">workbench.schema.json</a>: search, titles, descriptions and a
+	control of the right type. Save writes this file <em>in place</em>: only the
+	values change, so your comments and layout stay as you wrote them, and a key
+	that is missing is added. Reset to defaults puts the defaults back in memory.
+	Changing the file by hand works too - it is read at the next start.</p>
+
+	<h2 id="schema">The schema</h2>
+	<p><code>workbench.schema.json</code> is a JSON Schema (2020-12) document that
+	describes this file: groups, keys, types, choices, ranges and defaults. The
+	Preferences pane is built from it, so a key that is not in the schema has no row,
+	and a row always matches its documentation. The editor understands
+	<code>properties</code>, <code>title</code>, <code>description</code>,
+	<code>type</code>, <code>enum</code>, <code>minimum</code>, <code>maximum</code>
+	and <code>default</code>; the rest of the document is for other editors and
+	validators.</p>
+
+	<h2>Which file</h2>
+	<p>In this order:</p>
+	<ol>
+		<li><code>--config &lt;path&gt;</code> on the command line,</li>
+		<li>the <code>WORKBENCH_CONFIG</code> environment variable,</li>
+		<li><code>workbench.jsonc</code>, next to the application.</li>
+	</ol>
+	<p>Every key is optional. A missing key keeps its default; a syntax error is reported
+	on the Application page and the defaults are used.</p>
+
+	<h2>Keys</h2>
+	<table>
+		<tr><th>Key</th><th>Type</th><th>Default</th><th>Effect</th></tr>
+		<tr><td><code>release.channel</code></td><td>string</td><td><code>dev</code></td>
+		<td>shown on the Application page and the About box</td></tr>
+		<tr><td><code>ui.theme</code></td><td><code>dark</code> / <code>light</code></td><td><code>dark</code></td>
+		<td>applied before the window is built</td></tr>
+		<tr><td><code>ui.toolbar</code></td><td>boolean</td><td><code>true</code></td>
+		<td><code>false</code> builds the window without the toolbar</td></tr>
+		<tr><td><code>startup.pane</code></td><td><code>application</code> / <code>instrument-panel</code></td>
+		<td><code>application</code></td><td>the pane shown at startup</td></tr>
+		<tr><td><code>startup.pump</code>, <code>valve</code>, <code>armed</code></td><td>boolean</td>
+		<td><code>false</code></td><td>the panel's switches at startup</td></tr>
+		<tr><td><code>simulation.alarm_limit</code></td><td>number</td><td><code>75</code></td>
+		<td>the interlock threshold, in bar (10…100)</td></tr>
+		<tr><td><code>simulation.chart_seconds</code></td><td>number</td><td><code>10</code></td>
+		<td>how much history the trend shows (1…10 s)</td></tr>
+	</table>
+
+	<h2>Example</h2>
+<pre><code>{
+	// a small plant, light, without the toolbar
+	"release": { "channel": "beta" },
+
+	"ui": {
+		"theme": "light",
+		"toolbar": false
+	},
+
+	"startup": {
+		"pane": "instrument-panel",
+		"pump": true,
+		"valve": true,
+		"armed": true
+	},
+
+	"simulation": {
+		"alarm_limit": 50,
+		"chart_seconds": 5
+	}
+}</code></pre>
+
+	<h2>Seeing what was read</h2>
+	<p>The Application page shows the file that was used, whether it was found, and how
+	many settings were applied. The status bar repeats it when the application starts.</p>
+
+	<div class="note">The file is only read at startup: change it, then reopen the
+	application. Writing it back from the interface is left as an exercise.</div>
+
+	<footer>Raven Workbench · part of the Raven repository · Apache-2.0</footer>
+</main>
+<script>
+	/* Keep ?theme=... on the links to the other pages. */
+	(function () {
+		if (!location.search) return;
+		document.querySelectorAll('a[href$=".html"], a[href*=".html#"]').forEach(function (link) {
+			link.search = location.search;
+		});
+	})();
+</script>
+</body>
+</html>

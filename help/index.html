@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raven Workbench — User guide</title>
+<link rel="stylesheet" href="style.css">
+<script>
+	/* The application passes its theme: index.html?theme=dark */
+	(function () {
+		var theme = new URLSearchParams(location.search).get("theme");
+		if (theme === "dark") document.documentElement.className = "dark";
+	})();
+</script>
+</head>
+<body>
+<main>
+	<nav>
+		<a href="index.html">User guide</a>
+		<a href="configuration.html">Configuration</a>
+		<a href="#shortcuts">Shortcuts</a>
+		<a href="#troubleshooting">Troubleshooting</a>
+	</nav>
+
+	<h1>Raven Workbench</h1>
+	<p class="lead">A small desktop application built with Raven: a menu bar, a toolbar,
+	a side bar, a status bar, an application page and an instrument panel.</p>
+
+	<h2 id="around">Getting around</h2>
+	<p>The central area is one pane at a time. Pick a pane with the side bar, with the
+	<strong>View</strong> menu, or with a shortcut. The pane you leave keeps its state:
+	the instrument panel goes on showing the same trend when you come back to it.</p>
+
+	<table>
+		<tr><th>Pane</th><th>What it shows</th><th>How to open it</th></tr>
+		<tr><td>Application</td><td>name, version, build date, release channel, the configuration file in use, shortcuts</td><td><kbd>Ctrl</kbd>+<kbd>0</kbd>, side bar, View menu</td></tr>
+		<tr><td>Instrument panel</td><td>two meters, three lamps, three switches, a live trend</td><td><kbd>Ctrl</kbd>+<kbd>I</kbd>, toolbar, side bar, View menu</td></tr>
+		<tr><td>User guide</td><td>this documentation, in an embedded browser</td><td><kbd>F1</kbd>, Help menu, side bar</td></tr>
+		<tr><td>Preferences</td><td>every setting as a form, built from the schema</td><td><kbd>Ctrl</kbd>+<kbd>,</kbd>, Edit menu</td></tr>
+	</table>
+
+	<h2 id="panel">The instrument panel</h2>
+	<p>A small simulated plant: the pump charges a pressure vessel, the valve lets flow
+	through, and the interlocks trip the alarm above a threshold.</p>
+	<ul>
+		<li><strong>Pressure gauge</strong> — needle, ticks, and an arc filled to the value.
+		The needle turns red above the alarm threshold.</li>
+		<li><strong>Flow meter</strong> — the digital readout and its bar.</li>
+		<li><strong>Lamps</strong> — power, link, alarm. The alarm lamp is lit when the
+		interlocks are armed and the pressure is above the threshold.</li>
+		<li><strong>Switches</strong> — pump, valve, interlocks. They change the colour of
+		the button and the text.</li>
+		<li><strong>Trend</strong> — pressure and flow for the last few seconds, with the
+		alarm threshold drawn as a line. The window length comes from the configuration.</li>
+	</ul>
+	<div class="note">The simulation only runs while the instrument panel is visible. A
+	hidden pane costs no frames.</div>
+
+	<h2 id="preferences">Preferences</h2>
+	<p><strong>Edit &gt; Preferences</strong> shows every setting of the configuration as a
+	form: a search field, one row per setting with its title and description, and a
+	control of the right type. The form is built from
+	<a href="configuration.html#schema">workbench.schema.json</a>, so the documentation
+	and the editor cannot describe different settings.</p>
+	<p>Changes that do not need a restart are applied at once: the theme, the alarm
+	threshold, the trend window and the three switches. <strong>Save</strong> writes the
+	file; <strong>Reset to defaults</strong> puts the defaults back in memory.</p>
+
+	<h2 id="menus">Right-click menus</h2>
+	<p>Right-click the side bar or any pane. The menu that opens belongs to that
+	area and offers the same commands as the menu bar:</p>
+	<table>
+		<tr><th>Where</th><th>What it offers</th></tr>
+		<tr><td>Side bar</td><td>the three panes and Preferences</td></tr>
+		<tr><td>Application</td><td>User guide, Preferences, copy the version or the configuration path</td></tr>
+		<tr><td>Instrument panel</td><td>pause the simulation, reset the plant, copy the readings</td></tr>
+		<tr><td>Preferences</td><td>save, reset to defaults, copy the configuration path</td></tr>
+		<tr><td>User guide</td><td>back, forward, reload, Preferences</td></tr>
+	</table>
+
+	<h2 id="shortcuts">Shortcuts</h2>
+	<table>
+		<tr><td><kbd>Ctrl</kbd>+<kbd>I</kbd></td><td>Instrument panel</td></tr>
+		<tr><td><kbd>Ctrl</kbd>+<kbd>0</kbd></td><td>Application page</td></tr>
+		<tr><td><kbd>F1</kbd></td><td>User guide (this page)</td></tr>
+		<tr><td><kbd>Ctrl</kbd>+<kbd>,</kbd></td><td>Preferences</td></tr>
+		<tr><td><kbd>Ctrl</kbd>+<kbd>Q</kbd></td><td>Quit</td></tr>
+	</table>
+
+	<h2 id="config">Configuration</h2>
+	<p>Theme, toolbar, startup pane, startup switches, alarm threshold and trend length
+	come from a JSONC file. See <a href="configuration.html">Configuration</a> for the
+	keys, the schema and an example.</p>
+
+	<h2 id="troubleshooting">Troubleshooting</h2>
+	<table>
+		<tr><th>Symptom</th><th>Cause</th></tr>
+		<tr><td>This page shows “no browser”</td><td>The embedded browser needs a Chromium-family
+		browser installed (Chrome, Chromium, Edge, Brave). Raven drives it headlessly.</td></tr>
+		<tr><td>The instrumentation does not move</td><td>The panel is paused, or no pane with the
+		panel is open. Press Resume / open the panel.</td></tr>
+		<tr><td>The Application page reports “defaults”</td><td>The configuration file was not
+		found or has a syntax error; the error and the line are shown there.</td></tr>
+		<tr><td>A switch does nothing</td><td>An action moves the plant only while the panel is
+		visible; the switches themselves always work.</td></tr>
+	</table>
+
+	<footer>Raven Workbench · part of the Raven repository · Apache-2.0</footer>
+</main>
+<script>
+	/* Keep ?theme=... on the links to the other pages. */
+	(function () {
+		if (!location.search) return;
+		document.querySelectorAll('a[href$=".html"], a[href*=".html#"]').forEach(function (link) {
+			link.search = location.search;
+		});
+	})();
+</script>
+</body>
+</html>

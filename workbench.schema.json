@@ -1,0 +1,103 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://github.com/oscar-soirey/Raven/Examples/Workbench/workbench.schema.json",
+	"title": "Raven Workbench settings",
+	"description": "Settings of the Workbench example. The Preferences pane is built from this file: each group and setting provides its title, description, type, range or choices, and default. The editor understands this subset of JSON Schema (object properties, boolean/string/number/integer, enum, minimum, maximum); the rest is left to editors.",
+	"type": "object",
+	"additionalProperties": false,
+	"properties": {
+		"release": {
+			"title": "Release",
+			"description": "What the application says about itself.",
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"channel": {
+					"title": "Release channel",
+					"description": "Shown on the Application page and in the About box.",
+					"type": "string",
+					"enum": ["dev", "beta", "stable"],
+					"default": "dev"
+				}
+			}
+		},
+		"ui": {
+			"title": "Interface",
+			"description": "What the window shows. The toolbar changes at the next start.",
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"theme": {
+					"title": "Theme",
+					"description": "Dark or light. Applied at once.",
+					"type": "string",
+					"enum": ["dark", "light"],
+					"default": "dark"
+				},
+				"toolbar": {
+					"title": "Toolbar",
+					"description": "Show the toolbar above the panes. Applies at the next start.",
+					"type": "boolean",
+					"default": true
+				}
+			}
+		},
+		"startup": {
+			"title": "Startup",
+			"description": "Where the application starts. Applies at the next start, except the switches.",
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"pane": {
+					"title": "First pane",
+					"description": "The pane shown when the window opens.",
+					"type": "string",
+					"enum": ["application", "instrument-panel"],
+					"default": "application"
+				},
+				"pump": {
+					"title": "Pump on at startup",
+					"description": "Start with the pump running. Applied at once.",
+					"type": "boolean",
+					"default": false
+				},
+				"valve": {
+					"title": "Valve open at startup",
+					"description": "Start with the valve open. Applied at once.",
+					"type": "boolean",
+					"default": false
+				},
+				"armed": {
+					"title": "Interlocks armed at startup",
+					"description": "Start with the alarm interlock armed. Applied at once.",
+					"type": "boolean",
+					"default": false
+				}
+			}
+		},
+		"simulation": {
+			"title": "Simulation",
+			"description": "The plant and the trend. Applied at once.",
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"alarm_limit": {
+					"title": "Alarm threshold",
+					"description": "Pressure in bar at which the interlock trips.",
+					"type": "number",
+					"minimum": 10,
+					"maximum": 100,
+					"default": 75
+				},
+				"chart_seconds": {
+					"title": "Trend window",
+					"description": "How many seconds of history the chart shows.",
+					"type": "number",
+					"minimum": 1,
+					"maximum": 10,
+					"default": 10
+				}
+			}
+		}
+	}
+}

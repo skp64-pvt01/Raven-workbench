@@ -1,0 +1,30 @@
+// Raven Workbench - application settings.
+//
+// JSON with comments. Every key is optional: a missing key, or a file that
+// cannot be read, leaves the default in place. The application pane shows
+// which file was used and how many settings it applied.
+//
+// Start it with another file:
+//     ./workbench --config mine.jsonc
+//     WORKBENCH_CONFIG=~/.config/workbench.jsonc ./workbench
+{
+	// shown in the application pane and the About box
+	"release": { "channel": "dev" },
+
+	"ui": {
+		"theme": "dark",          // "dark" or "light"
+		"toolbar": true           // false hides the toolbar (View menu still works)
+	},
+
+	"startup": {
+		"pane": "application",    // "application" or "instrument-panel"
+		"pump": false,            // the panel's switches at startup
+		"valve": false,
+		"armed": false
+	},
+
+	"simulation": {
+		"alarm_limit": 75,        // bar, the interlock threshold (10..100)
+		"chart_seconds": 10       // trend window, in seconds (1..10)
+	}
+}
